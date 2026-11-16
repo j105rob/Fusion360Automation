@@ -41,3 +41,12 @@ Read `RULES.md` first. The short version of what it cost to learn:
 - Verify against the **real solid** with `measureMinimumDistance` and interference booleans.
   An analytic probe confirms whatever formula you fed it.
 - "It's loose" is a **direction**. Ask which one before changing anything.
+
+## License
+
+[MIT](LICENSE) — scripts, research notes and exported geometry alike. Print them, modify
+them, sell what you print. Attribution is welcome and not required.
+
+The dimensions recorded here were measured off products I own (Zippo, Leatherman Skeletool,
+Olight i Mini 2, The Mighty Bar). Those are measurements for the purpose of making a holder,
+not models of anyone's product, and the trademarks belong to their owners.
