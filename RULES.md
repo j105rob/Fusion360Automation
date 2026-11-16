@@ -679,6 +679,22 @@ the **capture bead** was measured as a slot cap and the build cried
 > such cylinders *below the cavity floor*, so one `origin.z < base_t` filter disambiguates them
 > permanently.
 
+### 8.3b A check must measure the MATERIAL, not the centres (2026-11-16)
+The round holder's pre-cut guard reported `column between the two slots 1.24 mm OK` on a band
+whose column measured **0.050 mm** on the solid. The formula was
+`2 * r_mid * cos(theta)` — the distance between the two slot root **cap centres** — so it was
+one whole `relief_w` too big, every time, on every band ever built with it. The measured
+`verify_band` column caught it; the guard that exists to catch it early did not.
+
+> Same family as §8.3: a guard that names a quantity must compute *that* quantity. Subtract the
+> feature's own size. `col = 2 * r_mid * cos(theta) - relief_w`.
+
+**And the geometric fact it was hiding:** on a band whose relief slots are concentric with the
+bore, **a SMALLER bore can wrap LESS deeply, not more.** `r_mid` shrinks with the bore, so the
+two slot roots sit closer to the centreline at the same angle. Band B's 13.25 bore caps out at
+−82°, against −80° on Band A's 15.10 — the first attempt at −86° put the slots 0.041 mm apart
+and the measured root web read **0.74 / 0.82 / 0.04** against floors of 1.5 / 1.2 / 1.2.
+
 ### 8.4 A cut that SPLITS a body still reports 0 unhealthy
 Deepening the Zippo relief slot to −150° ran its inner arc through the cavity floor and cut
 each band into loose pieces. The timeline was clean; **only the bounding box and the volume
@@ -738,7 +754,14 @@ cavity on a 6.00 bar printed to 0.08/side and would not seat.
    bodies you were not thinking about.
 8. **Warn before a timeline rebuild** (`markerPosition = 0; deleteAllAfterMarker()`) — it wipes
    manual edits.
-9. **Capture every new rule here and in `research/`** with the date, the failure, and the
+9. **When you promote a special-cased body to the general builder, re-check every exception
+   the special case carried (2026-11-16).** The Olight's Band B was an open cradle with its own
+   builder, which deliberately left the channel mouth **unchamfered** so a 0.50 chamfer could
+   not eat a 0.86 mm axial stop. Turning it into a snap band routed it through the generic
+   `build_band`, which chamfers the whole bed outline — silently undoing that decision and
+   taking the arm's anchorage down to 1.10 against a 1.5 floor with it. The exceptions a
+   special case carries are the *reasons* it was special. List them before deleting it.
+10. **Capture every new rule here and in `research/`** with the date, the failure, and the
    guardrail. A rule without the failure it came from gets argued away later.
 
 ---
@@ -794,6 +817,15 @@ cavity on a 6.00 bar printed to 0.08/side and would not seat.
 - **A tapered cut landing exactly tangent to an existing hole wall** fails with
   `EXTRUDE_CREATION_FAIL_ERROR`. Use `holeFeatures.createCountersinkInput(...)` and let it cut
   the clearance hole too.
+- **A chamfer's EDGE SELECTION is not authoritative while tangent chaining is on (2026-11-16).**
+  `addEqualDistanceChamferEdgeSet(edges, d, True)` — that third argument is `isTangentChain`,
+  and it means the chamfer runs on into any edge tangent to one you picked. The round holder's
+  cavity walls are tangent to its bore at the equator *by design*, so excluding the bore arc
+  from the selection changed nothing: the chamfer arrived via the wall edge and ate 0.50 mm of
+  the part's axial stop and of the arm's anchorage. **Passing `False` is not the fix** — the
+  chain then ends ON that tangent point and the feature fails outright with
+  `ASM_BL_END_TOO_CMPLX`. Exclude the whole tangent group instead, and verify by the edge
+  count.
 - **To chamfer a hole that gets patterned, chamfer one cell then pattern the cut and the
   chamfer together.** Selecting edges after the pattern stores one reference per edge and every
   one breaks ("Edge N missing") as soon as the count shrinks.
@@ -856,10 +888,11 @@ withdrawn — §5.2). Stress is as printed against the 15.0 MPa rule.
 |---|---|---|---|---|---|
 | Prybar holder | 2026-10-26 | 33 N | 6.1 kg = 180× | 11.4 MPa / 76% | **Rob: super tight.** Reach 0.08 survives because the capture is a 1.08 mm tangent bead (§1.2). Left alone. |
 | Pen clip 9.84 | — | — | — | ~16 MPa | **Rob: super tight.** 2.00 mm constant arc. Left alone. |
-| Pill bottle holder | 2026-10-27 | 26 N | 4.7 kg = 158× | 11.1 MPa / 74% | **Rob: super tight.** Grips by its **bore**; its lip does not print either. Section physically confirmed on the bottle — do not "fix" it. |
+| Pill bottle holder | 2026-10-27 | 26 N | 1.0 kg = 33× | 11.1 MPa / 74% | **Rob: super tight.** Grips by its **bore**; its lip does not print either. Section physically confirmed on the bottle — do not "fix" it. (The 4.7 kg on record was the retracted ×1.8 model; `escape_curve` says 1.0.) |
 | Zippo clip | **G** | 31 N | 2.0 kg = 31× | 17.3 MPa / 116% | `lip_over` 0.80, arms 2.40 → 1.60. Root web 1.64 **at the floor**. Band A (with C-stop) **at the LOW end**. Both bands reprint. |
 | Skeletool holder | **D** | 22 N | 4.2 / 2.1 / 1.4 kg at `tool_r` 0.20 / 1.50 / 3.00 | 16.5 MPa / 110% | Press went **down** while grip went **up**. Best geometry in the set — nearly square, so the lip rides its own 45° cam. Both bodies reprint. |
-| Olight iMini 2 | **E** | 50 N | 2.3 kg = 115× | 24.3 MPa / **162%** | Deliberate overstress: a printable lip, a tight bore and low stress cannot coexist on a 15 mm cylinder. Pressed once; the body comes off on the magnet. Both bands reprint. Band B **at the LOW end**. |
+| Olight iMini 2 — Band A (cap) | **F** | 50 N | 2.3 kg = 115× | 24.3 MPa / **162%** | Unchanged from rev E. Deliberate overstress: a printable lip, a tight bore and low stress cannot coexist on a 15 mm cylinder. Pressed **once** — the cap lives in the holder. |
+| Olight iMini 2 — Band B (body) | **F** | 28 N | 1.3 kg = 68× | 22.0 MPa / **147%** | **New: both ends now clamp.** Was an open cradle with zero radial retention. This is the **daily-cycled** flexure, so 147% is the number to watch. Band B **at the LOW end**. |
 
 **Accepted exceptions, and why**
 - **Olight at 162% of the stress rule.** Rob asked for tight, the cap is pressed in once, and
@@ -906,6 +939,8 @@ their floors at a −110° wrap.
 | 7.1 | "No overhangs" ≠ "no support" | a floating island, flagged by the slicer |
 | 8.1 | Verifying against an analytic model is not verification | 15.6 mm³ of overlap read as +0.20 clear |
 | 8.3 | A face picked by RADIUS alone finds the wrong face | a false alarm on imaginary geometry |
+| 8.3b | A check must measure the MATERIAL, not the centres | "1.24 OK" on a 0.050 mm column |
+| 9.9 | Re-check a special case's exceptions when you generalise it | a chamfer ate an axial stop and an anchorage |
 | 8.4 | A cut that splits a body still reports 0 unhealthy | caught only by volume |
 | 8.5 | A chamfer bigger than its land eats the part | half a body, 0 unhealthy |
 | 9.2 | The same complaint twice means the wrong knob | the through-line of this whole file |

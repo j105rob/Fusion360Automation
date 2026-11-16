@@ -201,13 +201,63 @@ PROFILES = {
         # five prints. 0.80 is two extrusion widths, which is the floor for a
         # feature that has to survive slicing.
         lip_over='0.80 mm',
+        # 2026-11-16 rev F. BOTH ENDS NOW CLAMP. Rob carries the plate in a
+        # trouser pocket and the body was not held: Band B was an OPEN CRADLE
+        # with no capture lip and walls stopping below the body's equator, so it
+        # had, by design, ZERO radial retention. Jostling peeled the body off
+        # the magnet and swung it out of the channel - and because the light
+        # switches on as it separates, that also meant it could come on in his
+        # pocket.
+        #
+        # Band B is therefore a real snap band now, bored for the BODY (13.25)
+        # through its own grip_d_b - NOT for the cap, which is the rev D defect.
+        # The step stop survives untouched: Band B's bore is cut for the body,
+        # so the 15.10 cap still cannot enter it and the light's own shoulder
+        # still lands on that bed face.
+        #
+        # What this gives up is the rev B/C removal motion. The body used to
+        # lift straight out with nothing but the magnet to beat; now it has to
+        # come out past a lip. That is the trade Rob asked for, and Band B's
+        # arms are deliberately the SOFT ones - see arm_root_b - because the
+        # body comes out every time the light is used while the cap is pressed
+        # in once.
+        grip_b_d='part_d',
+        cav_clear_b='0.14 mm',
+        # 1.60 FLAT, 4 extrusions, where Band A is 2.40 -> 1.60 tapered. Not a
+        # taper, because on this band the problem is the opposite one: the body
+        # is the smaller diameter, so the arm wrapping it is SHORTER than Band
+        # A's, and stress goes as 1/L^2 while the reach cannot come down (0.80
+        # is the printability floor). The only levers left are thickness and
+        # wrap, so both go to their limits. 1.60 is also exactly the root web
+        # floor, which run() checks - do not go below it.
+        arm_root_b='1.60 mm',
+        arm_tip_b='1.60 mm',
+        # -80, the same as Band A, and the first attempt at -86 was WRONG in
+        # the interesting direction. A smaller bore puts the two slot roots
+        # CLOSER to the centreline for the same angle, not further - the column
+        # is 2*r_mid*cos(theta) - relief_w and r_mid shrinks with the bore - so
+        # Band B can wrap LESS deeply than Band A, not more. At -86 the two
+        # slots passed 0.041 mm apart and the measured root web read
+        # 0.74/0.82/0.04 against floors of 1.5/1.2/1.2: the arm was hanging off
+        # a razor, which is the one failure that has actually broken parts here.
+        # The arithmetic limit at this bore is -82.2; -80 keeps the margin the
+        # proven bands run.
+        relief_a0_b='-80 deg',
+        lip_over_b='0.80 mm',
+        lip_clear_b='0.25 mm',
         band_cells='2',
         band_a_len='12.0 mm',
-        band_b_len='24.0 mm',
-        kinds=('snap', 'cradle'),
+        # 14.0, down from the cradle's 24.0. Force scales with the band's
+        # length and the body end is now the daily-use interface, so the extra
+        # 10 mm would have cost ~70% more press force to hold a 19.5 g light
+        # that already has 30x its weight of retention. The grip IS the support,
+        # so the length the cradle needed to stop the body drooping is no longer
+        # doing a job.
+        band_b_len='14.0 mm',
+        kinds=('snap', 'snap'),
         weight_g=19.5,
         blurb='MOD-GRID Olight i Mini 2 holder: snap band on the magnetic cap, '
-              'open cradle under the body so the light lifts straight out',
+              'second snap band on the body so both ends are clamped',
     ),
 }
 
@@ -258,6 +308,33 @@ def param_defs(pr):
         ('cradle_z',         'part_z + cradle_r - part_d / 2', 'mm', 'Cradle centre, sunk so the part sits on the SAME AXIS as it does in the snap band. Get this wrong and the two bands hold the part at different heights and it rocks.'),
         ('cradle_drop',      '1.00 mm',   'mm', 'How far the cradle band\'s top face stops BELOW its own centre. It must exceed cav_clear/2, or the walls rise past the part\'s widest point and the part is trapped in a rigid band with no arms to let it out. run() checks it. It also avoids ending the wall on a tangent knife edge.'),
         ('cradle_h',         'cradle_z - cradle_drop', 'mm', 'Cradle band overall height'),
+        # ---- BAND B's OWN SECTION (2026-11-16) ----
+        # Band B used to be an open cradle, so it needed no lip numbers at all.
+        # Now that it SNAPS onto the body it needs a full set, and it cannot
+        # share Band A's: Band A grips the CAP (grip_d 15.10) and Band B grips
+        # the BODY (13.25). Boring Band B for grip_d is exactly the rev D defect
+        # - a band sized for a diameter the part does not have at that station.
+        # Everything below defaults to Band A's value, so a one-piece part
+        # (the pill bottle) builds bit-identically to before.
+        ('grip_d_b',         pr.get('grip_b_d', 'grip_d'), 'mm', 'The diameter BAND B grips. On a one-piece part it is just grip_d. On the Olight it is the BODY, 13.25, against Band A\'s 15.10 cap.'),
+        ('cav_clear_b',      pr.get('cav_clear_b', 'cav_clear'), 'mm', 'Clearance on Band B\'s bore diameter (total). Separate from cav_clear because the two bands sit on different sections of the part, each measured to its own confidence.'),
+        ('cav_r_b',          'grip_d_b / 2 + cav_clear_b / 2', 'mm', 'Band B bore radius.'),
+        ('cav_hw_b',         'cav_r_b', 'mm', 'Band B wall half width.'),
+        ('bore_z_b',         'part_z + cav_r_b - grip_d_b / 2', 'mm', 'Band B bore centre, solved so the part sits on the SAME AXIS as it does in Band A. The part rests at the bottom of a larger bore, so a band gripping a SMALLER section needs its bore centre higher - exactly the correction cradle_z makes. Get it wrong and the light rocks between the two bands. run() asserts it.'),
+        ('arm_root_b',       pr.get('arm_root_b', 'arm_root'), 'mm', 'Band B arm thickness at the root. Its own parameter because Band B is the DAILY-USE flexure - the body comes out every time the light is used, while the cap is pressed in once - so its force budget is a different problem from Band A\'s.'),
+        ('arm_tip_b',        pr.get('arm_tip_b', 'arm_tip'), 'mm', 'Band B arm thickness at the lip. Never below 1.60 = 4 extrusions.'),
+        ('arm_blend_b',      pr.get('arm_blend_b', 'arm_blend'), 'mm', 'Band B taper blend height.'),
+        ('relief_a0_b',      pr.get('relief_a0_b', 'relief_a0'), 'deg', 'Band B slot wrap. It can go deeper than Band A\'s because its bore is smaller, so the two slot roots are further from meeting on the centreline - and arm LENGTH is the only lever that cuts stress without cutting the reach. run() measures the column.'),
+        ('lip_clear_b',      pr.get('lip_clear_b', 'lip_clear'), 'mm', 'Band B seated lip clearance.'),
+        ('lip_over_b',       pr.get('lip_over_b', 'lip_over'), 'mm', 'Band B lip reach. Same floor as everywhere: > lip_tipr and >= 2 extrusion widths, or the feature does not print.'),
+        ('lip_tip_y_b',      'grip_d_b / 2 - lip_over_b', 'mm', 'Band B innermost point of the lip'),
+        ('lip_apex_y_b',     'lip_tip_y_b - 0.4142135624 * lip_tipr', 'mm', 'Band B virtual apex'),
+        ('lip_cy_b',         'lip_apex_y_b + 1.4142135624 * lip_tipr', 'mm', 'Band B tip-radius centre - the point the seated part is actually closest to'),
+        ('lip_proj_b',       'cav_hw_b - lip_apex_y_b', 'mm', 'Band B lip projection = the rise of each 45 deg face'),
+        ('lip_z0_b',         'part_z + sqrt(((grip_d_b / 2 + lip_clear_b + lip_tipr) / 1 mm) ^ 2 - (lip_cy_b / 1 mm) ^ 2) * 1 mm - lip_proj_b', 'mm', 'Band B ramp foot, solved off the TIP RADIUS exactly as lip_z0 is - see that parameter for why the 45 deg line is the wrong thing to measure from.'),
+        ('lip_zt_b',         'lip_z0_b + lip_proj_b', 'mm', 'Band B lip tip height = where the load is applied'),
+        ('band_hw_b',        'cav_hw_b + arm_root_b + relief_w + rail_t', 'mm', 'Band B half width. It no longer matches Band A\'s, because the two bores differ.'),
+        ('band_h_b',         'lip_z0_b + 2 * lip_proj_b + land_h', 'mm', 'Band B overall height'),
         ('band_hw',          'cav_hw + arm_root + relief_w + rail_t', 'mm', 'Band half width'),
         ('band_h',           'lip_z0 + 2 * lip_proj + land_h', 'mm', 'Band overall height'),
         ('band_a_x',         '0 mm',      'mm', 'Band A bed face'),
@@ -429,11 +506,26 @@ def relief_slot(sk, x, side, cy, cz, r_in, r_out, th0, z_top, y_tip, z_blend):
 
 
 def bed_edges_no_relief(bed, ccy, ccz, r_in, r_out, y_vals, min_len,
-                        lip_y_max, lip_lo):
+                        lip_y_max, lip_lo, bore_r=None):
     """Bed-face edges minus the relief slot and the capture lip.
 
     Chamfering 0.5 off both sides of a 1.2 mm slot collapses it, and a 0.5
     chamfer either side of a 0.4 mm lip tip runs through itself.
+
+    `bore_r` additionally leaves the WHOLE CAVITY MOUTH sharp - bore arc and
+    both walls - for a band whose bed face is the part's axial stop. It has to
+    be the whole mouth and not just the arc, for two reasons. The walls are
+    TANGENT to the bore at its equator by design, so Fusion's chamfer runs
+    straight on into the arc from a selected wall edge whatever the selection
+    says; and dropping tangent chaining instead leaves the chain ending on that
+    tangent point, which fails outright with ASM_BL_END_TOO_CMPLX. Two reasons, and both of them have already
+    bitten this design: the stop is the annulus between this bore and the
+    larger section butting against it, and 0.50 of chamfer eats most of a
+    0.86 mm engagement (rev D left the cradle's channel sharp for exactly
+    this); and that same 0.50 is cut out of the arm's ANCHORAGE, which took
+    the measured root web ABOVE the slot cap from 1.60 to 1.10 against a
+    1.5 floor. Elephant foot there only ADDS material to the stop, and the
+    part drops in radially, so a tight mouth costs nothing.
     """
     def ends(e):
         try:
@@ -454,6 +546,9 @@ def bed_edges_no_relief(bed, ccy, ccz, r_in, r_out, y_vals, min_len,
             continue
         if pts and all(abs(y) <= lip_y_max + 0.01 and z >= lip_lo - 0.01
                        for y, z in pts):
+            continue
+        if bore_r and pts and all(abs(y) <= bore_r + 0.02 and z <= lip_lo + 0.02
+                                  for y, z in pts):
             continue
         if e.length / MM < min_len - 0.01:
             short.append(e.length / MM)
@@ -520,12 +615,20 @@ def fillet(root, edges, expr):
     return f.add(i)
 
 
-def chamfer(root, edges, expr):
+def chamfer(root, edges, expr, tangent=True):
+    """`tangent` is Fusion's isTangentChain. It is True by default and that is
+    usually what you want, but it means **the edge selection is not the whole
+    story**: the chamfer runs on into any edge tangent to one you picked. Here
+    the cavity's walls are tangent to the bore at its equator BY DESIGN, so a
+    chamfer on a wall edge propagates right round the bore arc and excluding
+    that arc from the selection achieves nothing. Pass False where the
+    selection has to be authoritative."""
     if not edges:
         return None
     f = root.features.chamferFeatures
     i = f.createInput2()
-    i.chamferEdgeSets.addEqualDistanceChamferEdgeSet(coll(edges), vi(expr), True)
+    i.chamferEdgeSets.addEqualDistanceChamferEdgeSet(coll(edges), vi(expr),
+                                                     tangent)
     return f.add(i)
 
 
@@ -597,13 +700,18 @@ def build_part(root, P, pr, log):
     return part
 
 
-def build_band(root, P, log, x0, name, lkey):
-    hw = mmv(P, 'band_hw'); bh = mmv(P, 'band_h'); bl = mmv(P, lkey)
-    bt = mmv(P, 'base_t'); cr = mmv(P, 'cav_r'); cz = mmv(P, 'bore_z')
-    ar = mmv(P, 'arm_root'); atip = mmv(P, 'arm_tip'); abl = mmv(P, 'arm_blend')
-    rw = mmv(P, 'relief_w'); ra0 = degv(P, 'relief_a0')
-    lty = mmv(P, 'lip_tip_y'); lay = mmv(P, 'lip_apex_y')
-    lz0 = mmv(P, 'lip_z0'); lzt = mmv(P, 'lip_zt'); ltr = mmv(P, 'lip_tipr')
+def build_band(root, P, log, x0, name, lkey, sfx='', stop_face=False):
+    """One snap band. `sfx` selects which section it grips: '' is Band A's set
+    (grip_d), '_b' is Band B's (grip_d_b). On a stepped part those are different
+    diameters and sharing one set is the rev D defect."""
+    pn = lambda nm: nm + sfx
+    hw = mmv(P, pn('band_hw')); bh = mmv(P, pn('band_h')); bl = mmv(P, lkey)
+    cr = mmv(P, pn('cav_r')); cz = mmv(P, pn('bore_z'))
+    ar = mmv(P, pn('arm_root')); atip = mmv(P, pn('arm_tip'))
+    abl = mmv(P, pn('arm_blend'))
+    rw = mmv(P, 'relief_w'); ra0 = degv(P, pn('relief_a0'))
+    lty = mmv(P, pn('lip_tip_y')); lay = mmv(P, pn('lip_apex_y'))
+    lz0 = mmv(P, pn('lip_z0')); lzt = mmv(P, pn('lip_zt')); ltr = mmv(P, 'lip_tipr')
     xm = x0 + bl / 2.0
     key = 'band_a_x' if name.endswith('A') else 'band_b_x'
 
@@ -629,7 +737,11 @@ def build_band(root, P, log, x0, name, lkey):
     cham = mmv(P, 'first_layer_cham')
     r_mid = cr + ar + rw / 2.0
     slot_bed = cz - r_mid * math.sin(math.radians(-ra0)) - rw / 2.0
-    col = 2.0 * r_mid * math.cos(math.radians(-ra0))
+    # 2026-11-16: this used to be the distance between the two root CAP CENTRES
+    # and was therefore relief_w too big - it printed "column 1.24 mm OK" on a
+    # band whose real column measured 0.050. Same class of fault as picking a
+    # face by radius alone: a check that does not measure the thing it names.
+    col = 2.0 * r_mid * math.cos(math.radians(-ra0)) - rw
     log.append('%s: ROOT WEB %.2f mm (= arm_root; the slot is concentric with the '
                'bore, so the arm is a constant-thickness spring) %s'
                % (name, ar, 'OK' if ar >= 1.5 else '** TOO THIN **'))
@@ -653,7 +765,16 @@ def build_band(root, P, log, x0, name, lkey):
     bed = face_at_x(body, x0)
     keep, short = bed_edges_no_relief(bed, 0.0, cz, cr + ar, cr + ar + rw,
                                       (cr + ar, cr + atip, cr + ar + rw),
-                                      2 * cham + 0.1, cr, lz0)
+                                      2 * cham + 0.1, cr, lz0,
+                                      bore_r=cr if stop_face else None)
+    if stop_face:
+        log.append('%s: bore mouth left UNCHAMFERED on purpose - this bed face is '
+                   'the axial stop, so %.2f of chamfer would come off both the '
+                   'engagement the shoulder lands on and the arm\'s anchorage '
+                   'above the slot root. The WALLS come out of the selection '
+                   'too, not just the arc: they are tangent to the bore, so the '
+                   'chamfer runs on into it from a wall edge regardless.'
+                   % (name, cham))
     chamfer(root, keep, 'first_layer_cham')
     add_legs(root, P, body, plane_at_x(root, key, '%s bed' % name), x0, name)
     log.append('%s: %.2f wide x %.2f tall x %.2f | cradle R%.2f centred z %.2f '
@@ -661,9 +782,9 @@ def build_band(root, P, log, x0, name, lkey):
                'arm %.2f root -> %.2f tip (%.0f -> %.0f extrusions), slot wrap '
                '%.0f deg | lip 45/45, tip r%.2f at z %.2f reaching %.2f inboard, '
                'ramp foot z %.2f | chamfer %d edges, %d left sharp'
-               % (name, 2 * hw, bh, bl, cr, cz, mmv(P, 'grip_d') / 2.0, ar, atip,
-                  ar / 0.4, atip / 0.4, ra0, ltr, lzt, mmv(P, 'lip_over'), lz0,
-                  len(keep), len(short)))
+               % (name, 2 * hw, bh, bl, cr, cz, mmv(P, pn('grip_d')) / 2.0, ar,
+                  atip, ar / 0.4, atip / 0.4, ra0, ltr, lzt,
+                  mmv(P, pn('lip_over')), lz0, len(keep), len(short)))
     return body
 
 
@@ -952,7 +1073,7 @@ def lip_profile_fn(chw, cav_r, bt, lz0, lzt, lip_y, apex_y, tipr):
     return f
 
 
-def seat_check(log, P):
+def seat_check(log, P, sfx='', label='Band A'):
     """Will the part seat, and can the lip hold it OUT instead?
 
     Only the DOWNWARD component of the contact normal pulls the part home, and
@@ -966,12 +1087,17 @@ def seat_check(log, P):
     corner radius is the part radius and it cancels out of the lip placement
     exactly, so the only thing left to be wrong about is the diameter.
     """
-    d = mmv(P, 'grip_d'); bt = mmv(P, 'base_t')
-    chw = mmv(P, 'cav_hw') - PRINT_BIAS
-    cav_r = mmv(P, 'cav_r')
-    lz0 = mmv(P, 'lip_z0'); lzt = mmv(P, 'lip_zt'); tipr = mmv(P, 'lip_tipr')
-    lip_y = mmv(P, 'lip_tip_y') - PRINT_BIAS
-    apex_y = mmv(P, 'lip_apex_y') - PRINT_BIAS
+    pn = lambda nm: nm + sfx
+    d = mmv(P, pn('grip_d'))
+    chw = mmv(P, pn('cav_hw')) - PRINT_BIAS
+    cav_r = mmv(P, pn('cav_r'))
+    # not base_t: on a band gripping a smaller section the bore centre is
+    # raised so the part keeps the same axis, so the floor of the bore is
+    # bore_z - cav_r and NOT the band's base thickness.
+    bt = mmv(P, pn('bore_z')) - cav_r
+    lz0 = mmv(P, pn('lip_z0')); lzt = mmv(P, pn('lip_zt')); tipr = mmv(P, 'lip_tipr')
+    lip_y = mmv(P, pn('lip_tip_y')) - PRINT_BIAS
+    apex_y = mmv(P, pn('lip_apex_y')) - PRINT_BIAS
     f = lip_profile_fn(chw, cav_r, bt, lz0, lzt, lip_y, apex_y, tipr)
     lock_deg = math.degrees(math.atan(MU_SEAT))
 
@@ -1004,15 +1130,16 @@ def seat_check(log, P):
         dy = (f(z + e) - f(z - e)) / (2 * e)
         return 90.0 if abs(dy) < 1e-9 else math.degrees(math.atan(1.0 / abs(dy)))
 
-    log.append('SEATING, AS PRINTED (cavity %.2f/wall under). The contact face must '
-               'stay steeper than arctan(mu=%.2f) = %.1f deg or the arms hold the '
-               'part OUT. Swept over the DIAMETER, since that is the only uncertain '
-               'number on a cylinder.' % (PRINT_BIAS, MU_SEAT, lock_deg))
+    log.append('SEATING of %s on the %.2f section, AS PRINTED (cavity %.2f/wall '
+               'under). The contact face must stay steeper than arctan(mu=%.2f) = '
+               '%.1f deg or the arms hold the part OUT. Swept over the DIAMETER, '
+               'since that is the only uncertain number on a cylinder.'
+               % (label, d, PRINT_BIAS, MU_SEAT, lock_deg))
     worst, bad = 0.0, False
     for err in (-0.40, -0.20, 0.0, 0.20, 0.40, 0.60):
         dd = d + err
         s0, _ = splay(0.0, dd, lip_only=True)
-        cradle = (mmv(P, 'cav_clear') - 2.0 * PRINT_BIAS) - err
+        cradle = (mmv(P, pn('cav_clear')) - 2.0 * PRINT_BIAS) - err
         rows, h = [], 0.0
         while h <= 8.0:
             rows.append((h,) + splay(h, dd))
@@ -1046,14 +1173,14 @@ def seat_check(log, P):
     # is defined in. The sweep's "under the LIP" column above is a horizontal
     # gap, and on a steep contact the two differ by 1/cos(angle) - enough to
     # hide exactly the error this guard exists to catch.
-    fm = lip_profile_fn(mmv(P, 'cav_hw'), cav_r, bt, lz0, lzt,
-                        mmv(P, 'lip_tip_y'), mmv(P, 'lip_apex_y'), tipr)
+    fm = lip_profile_fn(mmv(P, pn('cav_hw')), cav_r, bt, lz0, lzt,
+                        mmv(P, pn('lip_tip_y')), mmv(P, pn('lip_apex_y')), tipr)
     az = bt + d / 2.0
     rad, z = 9e9, lz0
-    while z <= lzt + (mmv(P, 'cav_hw') - mmv(P, 'lip_apex_y')):
+    while z <= lzt + (mmv(P, pn('cav_hw')) - mmv(P, pn('lip_apex_y'))):
         rad = min(rad, math.hypot(fm(z), z - az) - d / 2.0)
         z += 0.002
-    want = mmv(P, 'lip_clear')
+    want = mmv(P, pn('lip_clear'))
     log.append('   lip_clear says %.2f and the modelled profile stands %.2f off '
                'the seated part, measured radially %s'
                % (want, rad, 'OK' if abs(rad - want) < 0.03 else
@@ -1165,12 +1292,14 @@ def measure_root_web(app, body, relief_w, log, label, below_z=1e9):
     return min(d for d, _, _, _ in found) if found else 1e9
 
 
-def verify_band(app, body, P, log, x0, weight_g, lkey):
-    bt = mmv(P, 'base_t'); cr = mmv(P, 'cav_r'); cz = mmv(P, 'bore_z')
-    ar = mmv(P, 'arm_root'); atip = mmv(P, 'arm_tip'); abl = mmv(P, 'arm_blend')
-    rw = mmv(P, 'relief_w'); ra0 = degv(P, 'relief_a0')
-    lz0 = mmv(P, 'lip_z0'); lzt = mmv(P, 'lip_zt'); bl = mmv(P, lkey)
-    d = mmv(P, 'grip_d')
+def verify_band(app, body, P, log, x0, weight_g, lkey, sfx='', stop_face=False):
+    pn = lambda nm: nm + sfx
+    cr = mmv(P, pn('cav_r')); cz = mmv(P, pn('bore_z'))
+    ar = mmv(P, pn('arm_root')); atip = mmv(P, pn('arm_tip'))
+    abl = mmv(P, pn('arm_blend'))
+    rw = mmv(P, 'relief_w'); ra0 = degv(P, pn('relief_a0'))
+    lz0 = mmv(P, pn('lip_z0')); lzt = mmv(P, pn('lip_zt')); bl = mmv(P, lkey)
+    d = mmv(P, pn('grip_d'))
     xm = x0 + bl / 2.0
     worst = (1e9, '')
 
@@ -1204,6 +1333,30 @@ def verify_band(app, body, P, log, x0, weight_g, lkey):
                   'OK' if worst[0] >= atip - 0.05 else '** thinner than arm_tip - '
                   'something is eating the arm **'))
 
+    if stop_face:
+        # MEASURED, not asserted. The analytic engagement is the same number
+        # whether or not a chamfer has eaten it, which is exactly the kind of
+        # check that passed on the Olight for three revisions. Walk DOWN from
+        # the bore's lowest point at the bed face and find where material
+        # actually starts.
+        zb = cz - cr
+        bite, zz = 0.0, zb - 0.005
+        while zz > zb - 1.2:
+            if body.pointContainment(p3(x0 + 0.02, 0.0, zz)) == 0:
+                break
+            bite = zb - zz
+            zz -= 0.005
+        # The annulus is against the LARGER section that butts into it - the
+        # cap, mmv('grip_d') - not against this band's own diameter.
+        avail = (mmv(P, 'grip_d') - (2.0 * cr - 2.0 * PRINT_BIAS)) / 2.0
+        log.append('    STOP FACE at the bed: the bore mouth is chamfered by '
+                   '%.3f mm -> the %.2f shoulder lands on %.3f mm of radial '
+                   'engagement, of the %.3f the bore leaves it as printed %s'
+                   % (bite, mmv(P, 'grip_d'), avail - bite, avail,
+                      'OK - unchamfered' if bite < 0.05 else
+                      '** the chamfer has eaten %.0f%% of the engagement **'
+                      % (100.0 * bite / max(avail, 1e-6))))
+
     measure_root_web(app, body, rw, log, 'root web', below_z=cz)
 
     # the column between the two slots, probed on the real solid
@@ -1227,7 +1380,7 @@ def verify_band(app, body, P, log, x0, weight_g, lkey):
                % (bore, d, bore - d, gap, d - gap))
 
     F, sig = flexure_check(log, bl, ar, atip, abl, cr, ra0, cz, lzt,
-                           mmv(P, 'lip_over'))
+                           mmv(P, pn('lip_over')))
     push = 2 * F
     # NOT 2*F*1.8. That wedge factor belongs to a lip riding over a flat face;
     # on a cylinder the part's own radius sets the ramp and it is far shallower.
@@ -1264,6 +1417,9 @@ def verify_band(app, body, P, log, x0, weight_g, lkey):
         v -= 0.005
     log.append('    legs start at x=%.3f, bed is x=%.3f -> %s'
                % (v, x0, 'FLUSH' if abs(v - x0) < 0.02 else 'FLOATING'))
+
+
+SFX_B = '_b'   # Band B's own parameter set
 
 
 def run(_context: str):
@@ -1308,30 +1464,51 @@ def run(_context: str):
     cr = mmv(P, 'cav_r'); cz = mmv(P, 'bore_z'); pz = mmv(P, 'part_z')
     lz0 = mmv(P, 'lip_z0'); lzt = mmv(P, 'lip_zt'); gd0 = mmv(P, 'grip_d')
     log.append('user parameters: %d' % len(P))
-    log.append('%s: %.1f long | SNAP band grips %.2f (grip_d), CRADLE band carries '
-               '%.2f (part_d)%s | cradle R%.2f centred z %.2f, part axis z %.2f '
-               '(it rests %.2f below the cradle centre) | capture lip 45/45, tip '
-               'r%.2f reaching %.2f inboard of the widest point, ramp foot z %.2f, '
-               'tip z %.2f'
-               % (pr['label'], L, gd0, d, ' - SAME, one-piece part' if
-                  abs(gd0 - d) < 0.01 else ' - a STEPPED part, and the %.2f mm '
-                  'step between them is the axial stop' % ((gd0 - d) / 2.0),
+    kinds = pr.get('kinds', ('snap', 'snap'))
+    gdb = mmv(P, 'grip_d_b')
+    log.append('%s: %.1f long | Band A (%s) grips %.2f (grip_d), Band B (%s) takes '
+               '%.2f (grip_d_b)%s | Band A bore R%.2f centred z %.2f, part axis '
+               'z %.2f (it rests %.2f below the bore centre) | capture lip 45/45, '
+               'tip r%.2f reaching %.2f inboard of the widest point, ramp foot '
+               'z %.2f, tip z %.2f'
+               % (pr['label'], L, kinds[0].upper(), gd0, kinds[1].upper(), gdb,
+                  ' - SAME, one-piece part' if abs(gd0 - d) < 0.01 else
+                  ' - a STEPPED part, and the %.2f mm step between them is the '
+                  'axial stop' % ((gd0 - d) / 2.0),
                   cr, cz, pz, cz - pz, mmv(P, 'lip_tipr'),
                   mmv(P, 'lip_over'), lz0, lzt))
+    if kinds[1] == 'snap' and abs(gdb - gd0) > 0.01:
+        # The two bands sit on different diameters, so they are two different
+        # flexures and the axis they hold the part on has to be solved, not
+        # assumed. This is the check rev D's cradle needed and did not have.
+        axis_b = mmv(P, 'bore_z_b') - (mmv(P, 'cav_r_b') - gdb / 2.0)
+        log.append('Band B bore R%.2f centred z %.2f -> it holds the %.2f body on '
+                   'axis z %.2f against Band A\'s z %.2f %s'
+                   % (mmv(P, 'cav_r_b'), mmv(P, 'bore_z_b'), gdb, axis_b, pz,
+                      'OK - SAME AXIS' if abs(axis_b - pz) < 0.01 else
+                      '** THE TWO BANDS HOLD THE PART AT DIFFERENT HEIGHTS - it '
+                      'will rock between them **'))
     log.append('lip_clear %.2f - on a cylinder the part radius CANCELS out of the '
                'lip placement, so this is pure tolerance to the diameter being '
                'wrong: it absorbs %.2f mm of oversize before the lip touches at '
                'seated.' % (mmv(P, 'lip_clear'), mmv(P, 'lip_clear') / 0.854))
     log.append('')
-    seat_check(log, P)
+    seat_check(log, P, '', 'Band A')
+    if kinds[1] == 'snap' and abs(gdb - gd0) > 0.01:
+        log.append('')
+        seat_check(log, P, SFX_B, 'Band B')
     log.append('')
 
     part = build_part(root, P, pr, log)
     xa = mmv(P, 'band_a_x'); xb = mmv(P, 'band_b_x')
-    kinds = pr.get('kinds', ('snap', 'snap'))
-    maker = {'snap': build_band, 'cradle': build_cradle}
-    a = maker[kinds[0]](root, P, log, xa, 'Band A', 'band_a_len')
-    b = maker[kinds[1]](root, P, log, xb, 'Band B', 'band_b_len')
+    a = build_band(root, P, log, xa, 'Band A', 'band_a_len') \
+        if kinds[0] == 'snap' else \
+        build_cradle(root, P, log, xa, 'Band A', 'band_a_len')
+    b = build_band(root, P, log, xb, 'Band B', 'band_b_len', SFX_B,
+                   stop_face=bool(pr.get('cap_len'))
+                   and abs(mmv(P, 'grip_d_b') - gd0) > 0.01) \
+        if kinds[1] == 'snap' else \
+        build_cradle(root, P, log, xb, 'Band B', 'band_b_len')
     bl = mmv(P, 'band_b_len')
     log.append('Band A is a %s %.1f long at x %.1f; Band B is a %s %.1f long at '
                'x %.1f - %.1f mm apart = %d cells at %.0f mm pitch'
@@ -1347,7 +1524,10 @@ def run(_context: str):
                       bb.maxPoint.y / MM, bb.minPoint.z / MM, bb.maxPoint.z / MM,
                       body.volume / (MM ** 3)))
         if kind == 'snap':
-            verify_band(app, body, P, log, x0, pr['weight_g'], lk)
+            sf = '' if nm == 'Band A' else SFX_B
+            verify_band(app, body, P, log, x0, pr['weight_g'], lk, sf,
+                        stop_face=bool(sf) and bool(pr.get('cap_len'))
+                        and abs(mmv(P, 'grip_d_b') - gd0) > 0.01)
         else:
             verify_cradle(body, P, log, x0, lk)
 
@@ -1363,13 +1543,38 @@ def run(_context: str):
     # lip tip. Peak splay is at the point where its equator is level with the
     # tip, which is the force the fingers actually feel.
     gd = mmv(P, 'grip_d')
-    peak = lzt - pz
-    free = lzt - pz + gd / 2.0
-    for h, what in ((peak, 'peak splay - the equator is level with the lip tip'),
-                    (free, 'the part is above the lip')):
-        v = clash(tbm, part, a, shift_matrix(h))
-        log.append('  lifted %.2f mm vs Band A: %.3f mm3  %s'
-                   % (h, v, ('clear - ' if v < 0.01 else 'arms splayed - ') + what))
+    for bd, nm, kd, sf in ((a, 'Band A', kinds[0], ''),
+                           (b, 'Band B', kinds[1], SFX_B)):
+        if kd != 'snap':
+            continue
+        gg = mmv(P, 'grip_d' + sf)
+        zt = mmv(P, 'lip_zt' + sf)
+        peak = zt - pz
+        free = zt - pz + gg / 2.0
+        for h, what in ((peak, 'peak splay - the equator is level with the lip tip'),
+                        (free, 'the part is above the lip')):
+            v = clash(tbm, part, bd, shift_matrix(h))
+            log.append('  lifted %.2f mm vs %s: %.3f mm3  %s'
+                       % (h, nm, v, ('clear - ' if v < 0.01 else 'arms splayed - ')
+                          + what))
+    # The AXIAL stop, which survives Band B becoming a snap: its bore is cut for
+    # the BODY, so the larger CAP still cannot enter it and the light's own
+    # shoulder lands on that bed face. Seated, the cap ends exactly ON the face
+    # and the two touch with zero overlap, so drive it 1 mm past to see it.
+    if pr.get('cap_len') and abs(mmv(P, 'grip_d_b') - gd) > 0.01:
+        through = temp_cyl(tbm, gd, pz, xb, xb + 1.0)
+        v = clash(tbm, through, b)
+        eng = (gd - (mmv(P, 'cav_r_b') * 2.0 - 2.0 * PRINT_BIAS)) / 2.0
+        log.append('  AXIAL: the stop is the annulus between Band B\'s bore and '
+                   'the cap - %.2f mm of radial engagement as printed, over the '
+                   'arc the shoulder lands on %s'
+                   % (eng, 'OK' if eng >= 0.5 else '** thin - the shoulder may '
+                      'ride over it **'))
+        log.append('  AXIAL: driving the %.2f cap 1 mm past Band B\'s bed face '
+                   'overlaps it by %.1f mm3 %s'
+                   % (gd, v, 'OK - the cap cannot pass, so the part cannot slide '
+                      'in' if v > 0.5 else '** the cap goes straight through - '
+                      'there is no axial stop **'))
     if kinds[1] == 'cradle':
         log.append('  Band B is an OPEN CRADLE, so the part must be clear of it at '
                    'EVERY height - nothing there is allowed to grip:')
@@ -1381,18 +1586,6 @@ def run(_context: str):
                        % (h, v, 'clear' if v < 0.01 else '** IT IS CATCHING **'))
         log.append('    -> the light lifts off its magnetic cap with nothing but '
                    'the magnet to beat %s' % ('OK' if not bad else '** NOT FREE **'))
-        if pr.get('cap_len'):
-            # Push the cap 1 mm PAST the stop face and it must hit material.
-            # The seated check above cannot show this: seated, the cap ends
-            # exactly ON that face, so the two touch with zero overlap.
-            through = temp_cyl(tbm, gd, pz, xb, xb + 1.0)
-            v = clash(tbm, through, b)
-            log.append('    AXIAL: driving the %.2f cap 1 mm past the stop face '
-                       'overlaps Band B by %.1f mm3 %s'
-                       % (gd, v, 'OK - it cannot pass, so the part cannot slide '
-                          'in' if v > 0.5 else '** the cap goes straight through - '
-                          'there is no axial stop **'))
-
     # Sketch geometry is frozen numbers, so re-expressing part_d would NOT move
     # the modelled part. Build a temporary cylinder at each diameter instead.
     log.append('')
@@ -1435,6 +1628,39 @@ def run(_context: str):
                    % (dd, err, v, 'CLEAR' if v < 0.01 else 'CLASH ', play,
                       '  ** UNDER THE THROAT - NOT RETAINED AT ALL **'
                       if dd <= cliff else ''))
+
+    if kinds[1] == 'snap' and abs(mmv(P, 'grip_d_b') - gd) > 0.01:
+        # The BODY is its own measurement with its own error bar, and Band B is
+        # now the band that holds it. Sweep it separately - sharing Band A's
+        # sweep would be the same mistake as sharing its bore.
+        bdy = mmv(P, 'grip_d_b')
+        crb = mmv(P, 'cav_r_b'); czb = mmv(P, 'bore_z_b')
+        bx0 = xb
+        bx1 = xb + L - mmv(P, 'cap_len') if pr.get('cap_len') else xb + bl
+        cliff_b = 2.0 * mmv(P, 'lip_tip_y_b') - 2.0 * PRINT_BIAS
+        log.append('')
+        log.append('   BAND B / the %.2f BODY. Throat as printed %.2f -> a body at '
+                   'or under that drops straight through. Margin %.2f mm.'
+                   % (bdy, cliff_b, bdy - cliff_b))
+        for err in (-0.40, -0.20, 0.0, 0.20, 0.40):
+            dd = bdy + err
+            tc = temp_cyl(tbm, dd, czb - (crb - dd / 2.0), bx0, bx1)
+            v = clash(tbm, tc, b)
+            play = 0.0
+            if v < 0.01:
+                lo, hi = 0.0, 6.0
+                for _ in range(14):
+                    md = (lo + hi) / 2.0
+                    if clash(tbm, tc, b, shift_matrix(md)) < 0.01:
+                        lo = md
+                    else:
+                        hi = md
+                play = lo
+            log.append('   BODY dia %5.2f (%+.2f) -> seated %7.3f mm3 %s, lifts '
+                       '%.2f mm before the lip bites%s'
+                       % (dd, err, v, 'CLEAR' if v < 0.01 else 'CLASH ', play,
+                          '  ** UNDER THE THROAT - NOT RETAINED **'
+                          if dd <= cliff_b else ''))
 
     unhealthy = [design.timeline.item(i).name for i in range(design.timeline.count)
                  if design.timeline.item(i).healthState !=

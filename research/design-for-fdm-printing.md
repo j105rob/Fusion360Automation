@@ -446,6 +446,75 @@ holder always feels like it moves before it bites. Shrinking the travel means sh
 reach, which is the one thing that must not shrink. `escape_curve()` in
 `modgrid_round_holder.py` computes all of it and prints the ramp angle beside the force.
 
+#### A SECOND BAND ON A DIFFERENT DIAMETER IS A SECOND PART, NOT A COPY (2026-11-16)
+
+The Olight holder was reported as not holding in a trouser pocket. The diagnosis was quick for
+once, because the defect was by design: **Band B was an open cradle with no capture lip and its
+walls stopping below the body's equator, so it had ZERO radial retention.** The cradle existed
+to let the body lift straight off its magnetic cap (see the section below), and in a pocket that
+is indistinguishable from the light falling out. Worse, the light switches on as it separates,
+so a loose body means **the torch can come on in your pocket** - the failure nobody had ranked.
+
+Converting it into a real snap band produced four lessons that have nothing to do with
+flashlights.
+
+**1. Two bands on two diameters need two parameter sets.** Every lip dimension in that script
+derived from one `grip_d`. Band A grips the cap (15.10) and Band B the body (13.25), so sharing
+the set would have bored Band B 1.85 mm oversize - which is exactly the rev D defect, where a
+band sized for a diameter the part does not have at that station **touched nothing at all for
+three revisions while the interference check said CLEAR**. The fix is a suffixed set
+(`grip_d_b`, `cav_r_b`, `lip_z0_b`, …) with every default pointing at Band A's value, so a
+one-piece part builds bit-identically and a stepped one states its second section explicitly.
+
+> **And the axis has to be SOLVED, not inherited.** A part rests at the bottom of a bore larger
+> than itself, so a band gripping a *smaller* section needs its bore centre *higher* to hold the
+> part on the same axis: `bore_z_b = part_z + cav_r_b - grip_d_b/2`. Get it wrong and the part
+> rocks between the two bands. Assert it - the check is one line and it prints both axes.
+
+**2. The exceptions a special case carries are the reasons it was special.** The cradle had its
+own builder, which deliberately left its channel mouth **unchamfered**, because a 0.50 mm bed
+chamfer eats most of a 0.86 mm axial stop. Routing the new snap band through the generic builder
+silently reinstated that chamfer - and it took the flexure's anchorage from 1.60 mm down to
+**1.100 against a 1.5 floor** along with the stop. Both were caught by checks, but only because
+the checks measure the solid.
+
+> Before deleting a special case, list what it was doing differently and why. Generalising code
+> generalises its defaults over your exceptions.
+
+**3. A chamfer's edge selection is not authoritative while tangent chaining is on.** Fusion's
+`isTangentChain` (the third argument to `addEqualDistanceChamferEdgeSet`) means the chamfer runs
+on into any edge tangent to one you picked. These cavity walls are tangent to the bore at its
+equator *by design*, so excluding the bore arc from the selection changed nothing - the chamfer
+arrived through the wall edge. Turning chaining off is not the answer either: the chain then ends
+on that tangent point and the feature fails with `ASM_BL_END_TOO_CMPLX`. **Exclude the whole
+tangent group, and verify by the edge count.**
+
+**4. A guard must measure the MATERIAL, not the CENTRES.** The pre-cut guard reported
+`column between the two slots 1.24 mm OK` on a band whose column measured **0.050 mm**:
+
+        col = 2 * r_mid * cos(theta)              # distance between cap CENTRES - wrong
+        col = 2 * r_mid * cos(theta) - relief_w   # material actually left
+
+One whole `relief_w` of optimism, on every band ever built with it, hidden only because every
+previous wrap was shallow enough that 1.2 mm of error never crossed the floor. Same family as
+"a face picked by radius alone finds the wrong face": **a guard that names a quantity has to
+compute that quantity.**
+
+> **The geometric fact it was hiding is worth keeping on its own: on a band whose relief slots
+> are CONCENTRIC with the bore, a SMALLER bore can wrap LESS deeply, not more.** `r_mid` shrinks
+> with the bore, so the two slot roots sit closer to the centreline at the same angle. The
+> intuition runs the other way and it is wrong: at -86 deg on a 13.25 bore the slots passed
+> 0.041 mm apart and the measured root web read **0.74 / 0.82 / 0.04** against floors of
+> 1.5 / 1.2 / 1.2.
+
+**The cost of the change, stated plainly**, since it is the trade rather than a free win: the
+body now comes out past a lip instead of lifting off the magnet, and Band B runs at **147% of
+the 15 MPa rule while being the DAILY-CYCLED flexure** - Band A's 162% is pressed once and left.
+Arm length is the only lever that reduces stress without reducing the reach, the reach is at its
+printability floor, and the wrap is at its collision limit - so the remaining fix is the one
+already on record: **curl the relief slots outboard for a -110 deg wrap**, which would pay back
+both bands at once.
+
 #### Can the part even TRANSMIT the insertion force? (2026-10-27)
 
 The MOD-GRID Olight holder was reported as "too big for the flashlight to clip into it and hold
